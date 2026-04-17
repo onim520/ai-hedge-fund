@@ -1,18 +1,23 @@
 import os
 import re
+from flask import Flask, request
 from dotenv import load_dotenv
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     raise ValueError("❌ 未找到 TELEGRAM_BOT_TOKEN，请在 .env 文件中配置")
 
-BOT_USERNAME = "@onimis_Bot"
-
-# 导入核心分析函数
+# 导入分析函数
 from web_app import analyze_single
+
+# Flask 应用
+app = Flask(__name__)
+
+# Telegram Bot 应用
+application = Application.builder().token(TOKEN).build()
 
 # --- 辅助函数：从 HTML 报告中提取摘要 ---
 def extract_summary_from_html(html: str) -> dict:
@@ -84,8 +89,7 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💰 最新价: ${summary['latest_price']}\n"
             f"📈 最终建议: {summary['action']}\n"
             f"💡 参考买入价: ${summary['buy_price']} | 卖出价: ${summary['sell_price']}\n"
-            f"📰 相关新闻: {summary['news_count']} 条\n\n"
-            f"详细图表请访问 Web 界面。"
+            f"📰 相关新闻: {summary['news_count']} 条"
         )
 
         await processing_msg.edit_text(reply, parse_mode="Markdown")
@@ -93,28 +97,24 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await processing_msg.edit_text(f"❌ 分析 {ticker} 时出错：{str(e)}")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip().upper()
-    if text.isalpha() and len(text) <= 5:
-        # 直接调用分析指令的逻辑
-        context.args = [text]
-        await analyze_command(update, context)
-    else:
-        await update.message.reply_text("请使用 /a <股票代码> 指令，例如 /a AAPL")
+# --- 注册指令 ---
+application.add_handler(CommandHandler('start', start_command))
+application.add_handler(CommandHandler('help', help_command))
+application.add_handler(CommandHandler('a', analyze_command))
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"更新 {update} 导致错误 {context.error}")
+# --- Webhook 路由 ---
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    if request.method == 'POST':
+        update = Update.de_json(request.get_json(force=True), application.bot)
+        await application.process_update(update)
+    return 'ok'
 
-# --- 启动机器人 ---
+@app.route('/')
+def home():
+    return '🤖 AI 股票分析机器人正在运行中...'
+
+# --- 启动 ---
 if __name__ == '__main__':
-    print('🤖 正在启动 Telegram 机器人...')
-    app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler('start', start_command))
-    app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('a', analyze_command))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_error_handler(error_handler)
-
-    print('✅ 机器人已启动，轮询中...')
-    app.run_polling(poll_interval=3)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
