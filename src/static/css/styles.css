@@ -1,0 +1,443 @@
+/* Base Styles */
+:root {
+    --bg-color: #1E1E1E;
+    --text-color: #E0E0E0;
+    --accent-green: #4CAF50;
+    --accent-red: #F44336;
+    --accent-blue: #2196F3;
+    --accent-purple: #9C27B0;
+    --accent-orange: #FF9800;
+    --accent-teal: #009688;
+    --header-height: 60px;
+    --color-error: #F44336;
+    --color-success: #4CAF50;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* Layout */
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.main-header {
+    height: var(--header-height);
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--accent-red);
+}
+
+.status-indicator.running {
+    background-color: var(--accent-green);
+}
+
+.system-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.control-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.control-btn.start {
+    background-color: var(--accent-green);
+    color: white;
+}
+
+.control-btn.stop {
+    background-color: var(--accent-red);
+    color: white;
+}
+
+.settings-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.settings-btn svg {
+    fill: var(--text-color);
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    gap: 20px;
+    padding: 20px;
+    height: calc(100vh - var(--header-height));
+}
+
+/* Communication Panel */
+.communication-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+}
+
+/* Agent Rooms (Thought Bubbles) */
+.agent-rooms {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+    height: 50%;
+    min-height: 0;
+}
+
+.agent-room {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    font-size: 0.85em;
+    min-height: 0;
+}
+
+.agent-room h3 {
+    font-size: 12px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.private-chat {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 6px;
+    font-size: 11px;
+    min-height: 0;
+}
+
+.agent-status {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.agent-room .agent-thought-container {
+    margin-top: 10px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+.agent-room .agent-thought-container h4 {
+    font-size: 12px;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.agent-thought {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 4px;
+}
+
+.agent-thought .thought-timestamp {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-right: 6px;
+}
+
+/* Central Chat */
+.central-chat {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    height: calc(50% - 5px);
+    min-height: 0;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    font-size: 13px;
+    min-height: 0;
+}
+
+/* Chat Input */
+.chat-input {
+    display: flex;
+    gap: 8px;
+}
+
+.chat-input textarea {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    color: var(--text-color);
+    font-family: inherit;
+    resize: none;
+    height: 36px;
+    font-size: 13px;
+}
+
+.chat-input button {
+    padding: 0 16px;
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.chat-input button:hover {
+    background-color: color-mix(in srgb, var(--accent-blue) 90%, white);
+}
+
+.chat-input button:active {
+    background-color: color-mix(in srgb, var(--accent-blue) 80%, black);
+}
+
+/* Trading Panel */
+.trading-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+}
+
+.chart-container {
+    flex: 2;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.analytics-container {
+    flex: 1;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* Agent Thoughts Container */
+.agent-thoughts-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    height: calc(50% - 5px);
+}
+
+.agent-thought-box {
+    width: 30%;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.agent-thought-box h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.agent-thought {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.thought-timestamp {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Message Styles */
+.message {
+    margin-bottom: 8px;
+    padding: 6px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.05);
+    font-size: 13px;
+}
+
+.message .message-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.agent-name {
+    font-weight: 500;
+}
+
+.timestamp {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.message-content {
+    margin-bottom: 8px;
+}
+
+.message-footer {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Placeholder styles */
+.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+/* WebSocket Connection Indicator */
+.connection-indicator {
+    display: inline-block;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.connection-indicator svg {
+    transition: color 0.3s ease;
+}
+
+.connection-indicator:not(.connected) svg {
+    color: var(--color-error);
+}
+
+.connection-indicator.connected svg {
+    color: var(--color-success);
+}
+
+/* Responsive Design */
+@media (max-width: 1366px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .agent-rooms {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .agent-rooms {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .agent-rooms {
+        grid-template-columns: 1fr;
+    }
+    
+    .main-header {
+        flex-direction: column;
+        height: auto;
+        padding: 12px;
+    }
+    
+    .status-controls {
+        margin-bottom: 12px;
+    }
+}
+
+/* Agent-specific colors */
+.agent-room.market-data h3 { color: var(--accent-blue); }
+.agent-room.quantitative h3 { color: var(--accent-purple); }
+.agent-room.risk-management h3 { color: var(--accent-orange); }
+.agent-room.portfolio-management h3 { color: var(--accent-teal); }
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

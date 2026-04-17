@@ -1,0 +1,8 @@
+﻿.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+poetry.lock
+*.log
+.DS_Store
