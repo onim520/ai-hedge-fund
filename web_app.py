@@ -1,4 +1,4 @@
-import gradio as gr
+# import gradio as gr
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -15,12 +15,12 @@ from src.advanced_tools import (
     calculate_support_resistance_volume_profile,
 )
 
+# 默认日期范围
 default_end = datetime.now().strftime("%Y-%m-%d")
 default_start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
 
-# 增强版 CSS：强制深色文字、高对比度卡片
+# 高对比度 CSS，确保所有文字清晰可见
 custom_css = """
-/* 全局报告卡片样式 */
 .report-text {
     font-size: 18px !important;
     line-height: 1.6 !important;
@@ -42,7 +42,6 @@ custom_css = """
     text-decoration: underline !important;
     font-weight: 600 !important;
 }
-/* 买卖建议卡片 */
 .action-buy {
     color: #166534 !important;
     background-color: #dcfce7 !important;
@@ -76,11 +75,11 @@ custom_css = """
     border: 2px solid #eab308 !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
-/* 输入框字体 */
 .gr-textbox, .gr-dropdown { font-size: 16px !important; }
 """
 
 def calculate_keltner_channel(df, period=20, scalar=2):
+    """计算肯特纳通道"""
     typical_price = (df['high'] + df['low'] + df['close']) / 3
     atr = ta.volatility.AverageTrueRange(high=df['high'], low=df['low'], close=df['close'], window=period).average_true_range()
     middle = ta.trend.ema_indicator(typical_price, window=period)
@@ -89,6 +88,7 @@ def calculate_keltner_channel(df, period=20, scalar=2):
     return upper, middle, lower
 
 def calculate_parabolic_sar(df, af_start=0.02, af_increment=0.02, af_max=0.2):
+    """计算抛物线 SAR"""
     high = df['high'].values
     low = df['low'].values
     n = len(df)
@@ -143,6 +143,7 @@ def create_interactive_chart(
     ma_selected=None, ema20=False, bb=False, kc=False, sar=False, vwap=False,
     volume=True, macd=False, rsi=False, kdj=False
 ):
+    """根据用户选择的指标动态生成交互式图表"""
     if df is None or df.empty:
         return go.Figure()
 
@@ -151,6 +152,7 @@ def create_interactive_chart(
     volume_up_color = '#26a69a'
     volume_down_color = '#ef5350'
 
+    # 计算所选指标
     if ma_selected:
         if 'MA5' in ma_selected: df['MA5'] = ta.trend.sma_indicator(df['close'], window=5)
         if 'MA10' in ma_selected: df['MA10'] = ta.trend.sma_indicator(df['close'], window=10)
@@ -182,6 +184,7 @@ def create_interactive_chart(
         df['D'] = stoch.stoch_signal()
         df['J'] = 3 * df['K'] - 2 * df['D']
 
+    # 构建子图布局
     subplot_names = ["K线"]
     row_heights = [0.5]
     rows = 1
@@ -202,7 +205,7 @@ def create_interactive_chart(
         row_heights.append(0.15)
         rows += 1
 
-    if rows == 1:
+    if rows == 1:  # 至少显示成交量
         subplot_names.append("成交量")
         row_heights.append(0.15)
         rows += 1
@@ -213,6 +216,7 @@ def create_interactive_chart(
         subplot_titles=tuple(subplot_names)
     )
 
+    # 第一行：K线 + 主图指标
     fig.add_trace(go.Candlestick(
         x=df.index, open=df['open'], high=df['high'], low=df['low'], close=df['close'],
         name="K线", increasing_line_color='#26a69a', decreasing_line_color='#ef5350'
@@ -240,11 +244,13 @@ def create_interactive_chart(
 
     current_row = 2
 
+    # 成交量
     if volume or rows == 2:
         colors = [volume_up_color if df['close'].iloc[i] >= df['open'].iloc[i] else volume_down_color for i in range(len(df))]
         fig.add_trace(go.Bar(x=df.index, y=df['volume'], name="成交量", marker_color=colors, showlegend=False), row=current_row, col=1)
         current_row += 1
 
+    # MACD
     if macd:
         if 'MACD' in df.columns:
             fig.add_trace(go.Scatter(x=df.index, y=df['MACD'], mode='lines', name='MACD', line=dict(color='#2962ff')), row=current_row, col=1)
@@ -253,6 +259,7 @@ def create_interactive_chart(
             fig.add_trace(go.Bar(x=df.index, y=df['MACD_hist'], name='柱状图', marker_color=colors_hist, showlegend=False), row=current_row, col=1)
         current_row += 1
 
+    # RSI
     if rsi:
         if 'RSI' in df.columns:
             fig.add_trace(go.Scatter(x=df.index, y=df['RSI'], mode='lines', name='RSI', line=dict(color='#9c27b0', width=1.5)), row=current_row, col=1)
@@ -260,6 +267,7 @@ def create_interactive_chart(
             fig.add_hline(y=30, line_dash="dash", line_color="green", opacity=0.5, row=current_row, col=1)
         current_row += 1
 
+    # KDJ
     if kdj:
         if 'K' in df.columns:
             fig.add_trace(go.Scatter(x=df.index, y=df['K'], mode='lines', name='K', line=dict(color='#2962ff', width=1.5)), row=current_row, col=1)
@@ -288,6 +296,7 @@ def analyze_single(
         return None, "请输入股票代码", ""
     ticker = ticker.strip().upper()
     try:
+        # 获取数据
         if period_choice in ["1分钟", "3分钟", "5分钟"]:
             period_map = {"1分钟": ("5d", "1m"), "3分钟": ("5d", "2m"), "5分钟": ("7d", "5m")}
             yf_period, yf_interval = period_map[period_choice]
@@ -299,15 +308,20 @@ def analyze_single(
         if df is None or df.empty:
             return None, f"无法获取 {ticker} 的数据", ""
 
+        # 获取额外信息
         quote = get_real_time_quote(ticker)
         news = get_market_news(ticker, limit=3)
         pivot = calculate_pivot_points(df)
         vp = calculate_support_resistance_volume_profile(df)
 
+        # 简单信号判断（基于 RSI）
         rsi_val = ta.momentum.rsi(df['close'], window=14).iloc[-1]
-        if rsi_val < 30: action, cls = "📈 买入", "action-buy"
-        elif rsi_val > 70: action, cls = "📉 卖出", "action-sell"
-        else: action, cls = "⏸️ 持有", "action-hold"
+        if rsi_val < 30:
+            action, cls = "📈 买入", "action-buy"
+        elif rsi_val > 70:
+            action, cls = "📉 卖出", "action-sell"
+        else:
+            action, cls = "⏸️ 持有", "action-hold"
 
         # 建议买卖价位
         buy_price = pivot['S1']
@@ -316,6 +330,7 @@ def analyze_single(
         if latest_close > sell_price: sell_price = pivot['R2']
         if latest_close < buy_price: buy_price = pivot['S2']
 
+        # 构建报告 HTML
         quote_html = f'<div class="report-text"><b>📡 实时报价</b> 最新: ${quote["c"]:.2f} (高:{quote["h"]:.2f} 低:{quote["l"]:.2f})</div>' if quote else ""
         pivot_html = f'<div class="report-text"><b>🎯 枢轴点</b> R3:{pivot["R3"]:.2f} R2:{pivot["R2"]:.2f} R1:{pivot["R1"]:.2f} P:{pivot["P"]:.2f} S1:{pivot["S1"]:.2f} S2:{pivot["S2"]:.2f} S3:{pivot["S3"]:.2f}</div>'
         vp_html = f'<div class="report-text"><b>📊 成交量剖面</b> 1.${vp["Level_1"]["price"]:.2f} (量:{vp["Level_1"]["volume"]:,.0f}) 2.${vp["Level_2"]["price"]:.2f} (量:{vp["Level_2"]["volume"]:,.0f}) 3.${vp["Level_3"]["price"]:.2f} (量:{vp["Level_3"]["volume"]:,.0f})</div>'
@@ -324,6 +339,7 @@ def analyze_single(
         final_html = f'<div class="{cls}">最终建议：{action}</div>'
         report = final_html + quote_html + pivot_html + vp_html + trade_html + news_html
 
+        # 组装均线选择列表
         ma_selected = []
         if ma5: ma_selected.append('MA5')
         if ma10: ma_selected.append('MA10')
@@ -381,7 +397,6 @@ with gr.Blocks(title="AI 股票分析助手", css=custom_css) as demo:
             report_single = gr.HTML(label="分析报告")
             plot_single = gr.Plot(label="技术图表")
 
-    # 所有输入组件的 change 事件都绑定到分析函数（即时更新）
     inputs_list = [ticker_single, period_choice, theme_choice,
                    ma5, ma10, ma20, ma30, ma60, ema20, bb, kc, sar, vwap,
                    volume, macd, rsi, kdj]
@@ -390,12 +405,65 @@ with gr.Blocks(title="AI 股票分析助手", css=custom_css) as demo:
     # 按钮点击触发
     btn_single.click(fn=analyze_single, inputs=inputs_list, outputs=outputs_list)
 
-    # 每个控件变化时也触发
+    # 每个控件变化时即时触发
     for comp in inputs_list:
         if hasattr(comp, 'change'):
             comp.change(fn=analyze_single, inputs=inputs_list, outputs=outputs_list)
 
-    gr.Markdown("---\n💡 **提示**：修改任何选项（股票、周期、指标）后图表将自动更新。支持缩放、悬停查看数值。")
+    gr.Markdown("---\n💡 **提示**：修改任何选项后图表将自动更新。支持缩放、悬停查看数值。")
 
 if __name__ == "__main__":
+    import gradio as gr
+
+    with gr.Blocks(title="AI 股票分析助手", css=custom_css) as demo:
+        gr.Markdown("# 📊 AI 股票技术分析助手 (即时更新版)")
+
+        with gr.Row():
+            with gr.Column(scale=1):
+                ticker_single = gr.Textbox(label="股票代码", value="AAPL")
+                period_choice = gr.Dropdown(choices=["1分钟", "3分钟", "5分钟", "日线", "周线", "月线"], label="K线周期", value="日线")
+                theme_choice = gr.Dropdown(choices=["light", "dark"], label="主题", value="light")
+
+                gr.Markdown("### 📊 主图指标")
+                with gr.Row():
+                    ma5 = gr.Checkbox(label="MA5", value=True)
+                    ma10 = gr.Checkbox(label="MA10", value=True)
+                    ma20 = gr.Checkbox(label="MA20", value=True)
+                with gr.Row():
+                    ma30 = gr.Checkbox(label="MA30", value=False)
+                    ma60 = gr.Checkbox(label="MA60", value=False)
+                    ema20 = gr.Checkbox(label="EMA20", value=False)
+                with gr.Row():
+                    bb = gr.Checkbox(label="布林带", value=True)
+                    kc = gr.Checkbox(label="肯特纳通道", value=False)
+                with gr.Row():
+                    sar = gr.Checkbox(label="SAR", value=False)
+                    vwap = gr.Checkbox(label="VWAP", value=False)
+
+                gr.Markdown("### 📉 副图指标")
+                volume = gr.Checkbox(label="成交量", value=True)
+                macd = gr.Checkbox(label="MACD", value=True)
+                rsi = gr.Checkbox(label="RSI", value=True)
+                kdj = gr.Checkbox(label="KDJ", value=True)
+
+                btn_single = gr.Button("刷新", variant="primary")
+                data_single = gr.Textbox(label="数据摘要", interactive=False)
+
+            with gr.Column(scale=2):
+                report_single = gr.HTML(label="分析报告")
+                plot_single = gr.Plot(label="技术图表")
+
+        inputs_list = [ticker_single, period_choice, theme_choice,
+                       ma5, ma10, ma20, ma30, ma60, ema20, bb, kc, sar, vwap,
+                       volume, macd, rsi, kdj]
+        outputs_list = [plot_single, report_single, data_single]
+
+        btn_single.click(fn=analyze_single, inputs=inputs_list, outputs=outputs_list)
+
+        for comp in inputs_list:
+            if hasattr(comp, 'change'):
+                comp.change(fn=analyze_single, inputs=inputs_list, outputs=outputs_list)
+
+        gr.Markdown("---\n💡 **提示**：修改任何选项后图表将自动更新。支持缩放、悬停查看数值。")
+
     demo.launch(share=True, auth=("Onim@123", "9413!@#"))
