@@ -1,3 +1,13 @@
+import sys
+import traceback
+
+def log_uncaught_exceptions(exctype, value, tb):
+    error_msg = ''.join(traceback.format_exception(exctype, value, tb))
+    print(f"❌❌❌ UNCAUGHT EXCEPTION:\n{error_msg}", file=sys.stderr)
+    sys.exit(1)
+
+sys.excepthook = log_uncaught_exceptions
+
 import os
 import re
 import asyncio
