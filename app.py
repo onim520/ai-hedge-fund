@@ -1,4 +1,4 @@
-﻿import pandas as pd
+import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -237,7 +237,7 @@ def analyze_single(
     volume, macd, rsi, kdj
 ):
     if not ticker:
-        return None, "请输入股票代码", ""
+        return None, "请输入股票代码", "", None
     ticker = ticker.strip().upper()
     try:
         if period_choice in ["1分钟", "3分钟", "5分钟"]:
@@ -249,7 +249,7 @@ def analyze_single(
             df = get_prices(ticker, default_start, default_end)
 
         if df is None or df.empty:
-            return None, f"无法获取 {ticker} 的数据", ""
+            return None, f"无法获取 {ticker} 的数据", "", None
 
         quote = get_real_time_quote(ticker)
         news = get_market_news(ticker, limit=3)
@@ -270,13 +270,13 @@ def analyze_single(
         if latest_close > sell_price: sell_price = pivot['R2']
         if latest_close < buy_price: buy_price = pivot['S2']
 
-        quote_html = f'<div class="report-text"><b>📡 实时报价</b> 最新:  (高:{quote["h"]:.2f} 低:{quote["l"]:.2f})</div>' if quote else ""
+        quote_html = f'<div class="report-text"><b>📡 实时报价</b> 最新: ${quote["c"]:.2f} (高:{quote["h"]:.2f} 低:{quote["l"]:.2f})</div>' if quote else ""
         pivot_html = f'<div class="report-text"><b>🎯 枢轴点</b> R3:{pivot["R3"]:.2f} R2:{pivot["R2"]:.2f} R1:{pivot["R1"]:.2f} P:{pivot["P"]:.2f} S1:{pivot["S1"]:.2f} S2:{pivot["S2"]:.2f} S3:{pivot["S3"]:.2f}</div>'
-        vp_html = f'<div class="report-text"><b>📊 成交量剖面</b> 1. (量:{vp["Level_1"]["volume"]:,.0f}) 2. (量:{vp["Level_2"]["volume"]:,.0f}) 3. (量:{vp["Level_3"]["volume"]:,.0f})</div>'
-        trade_html = f'<div class="report-text" style="background:#eef2ff; border-left-color:#6366f1;"><b>💡 建议买卖参考价</b><br>🟢 买入:  ｜ 🔴 卖出: </div>'
+        vp_html = f'<div class="report-text"><b>📊 成交量剖面</b> 1.${vp["Level_1"]["price"]:.2f} (量:{vp["Level_1"]["volume"]:,.0f}) 2.${vp["Level_2"]["price"]:.2f} (量:{vp["Level_2"]["volume"]:,.0f}) 3.${vp["Level_3"]["price"]:.2f} (量:{vp["Level_3"]["volume"]:,.0f})</div>'
+        trade_html = f'<div class="report-text" style="background:#eef2ff; border-left-color:#6366f1;"><b>💡 建议买卖参考价</b><br>🟢 买入: ${buy_price:.2f} ｜ 🔴 卖出: ${sell_price:.2f}</div>'
         news_html = '<div class="report-text"><b>📰 新闻</b> ' + '; '.join([f'<a href="{n["url"]}">{n["headline"]}</a>' for n in news]) + '</div>' if news else ""
         final_html = f'<div class="{cls}">最终建议：{action}</div>'
-        report = final_html + quote_html + pivot_html + vp_html + trade_html + news_html
+        report_html = final_html + quote_html + pivot_html + vp_html + trade_html + news_html
 
         ma_selected = []
         if ma5: ma_selected.append('MA5')
@@ -292,9 +292,22 @@ def analyze_single(
         )
 
         data_info = f"{ticker} | {period_choice} | {len(df)} 根K线"
-        return fig, report, data_info
+
+        # 构建结构化数据字典（用于 Telegram 机器人）
+        data_dict = {
+            'ticker': ticker,
+            'period': period_choice,
+            'data_info': data_info,
+            'latest_price': quote['c'] if quote else None,
+            'action': action,
+            'buy_price': buy_price,
+            'sell_price': sell_price,
+            'news_count': len(news) if news else 0,
+        }
+
+        return fig, report_html, data_info, data_dict
     except Exception as e:
-        return None, f"<pre>{traceback.format_exc()}</pre>", ""
+        return None, f"<pre>{traceback.format_exc()}</pre>", "", None
 
 if __name__ == "__main__":
     import gradio as gr

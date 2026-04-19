@@ -1,5 +1,4 @@
-﻿import os
-import re
+import os
 import asyncio
 import threading
 from flask import Flask, request
@@ -33,30 +32,6 @@ except Exception as e:
     print(f"❌ 初始化失败: {e}")
     raise e
 
-def extract_summary_from_html(html: str) -> dict:
-    summary = {
-        "action": "未知",
-        "latest_price": "N/A",
-        "buy_price": "N/A",
-        "sell_price": "N/A",
-        "news_count": 0,
-    }
-    action_match = re.search(r"最终建议：([📈📉⏸️\s]+[买卖持有]+)", html)
-    if action_match:
-        summary["action"] = action_match.group(1).strip()
-    price_match = re.search(r"最新:\s*\True([\d.]+)", html)
-    if price_match:
-        summary["latest_price"] = price_match.group(1)
-    buy_match = re.search(r"买入:\s*\True([\d.]+)", html)
-    sell_match = re.search(r"卖出:\s*\True([\d.]+)", html)
-    if buy_match:
-        summary["buy_price"] = buy_match.group(1)
-    if sell_match:
-        summary["sell_price"] = sell_match.group(1)
-    news_matches = re.findall(r'href="[^"]+"', html)
-    summary["news_count"] = len(news_matches)
-    return summary
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
@@ -83,7 +58,7 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing_msg = await update.message.reply_text(f"🔍 正在分析 {ticker}，请稍候...")
 
     try:
-        fig, report_html, data_info = analyze_single(
+        fig, report_html, data_info, data_dict = analyze_single(
             ticker=ticker,
             period_choice="日线",
             theme="light",
@@ -103,15 +78,18 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             kdj=True,
         )
 
-        summary = extract_summary_from_html(report_html)
+        if data_dict is None:
+            await processing_msg.edit_text(f"❌ 无法获取 {ticker} 的分析数据")
+            return
 
+        latest_price_str = f"${data_dict['latest_price']:.2f}" if data_dict['latest_price'] else "N/A"
         reply = (
             f"**{ticker} 技术分析摘要**\n\n"
-            f"📊 {data_info}\n"
-            f"💰 最新价: \n"
-            f"📈 最终建议: {summary['action']}\n"
-            f"💡 参考买入价:  | 卖出价: \n"
-            f"📰 相关新闻: {summary['news_count']} 条"
+            f"📊 {data_dict['data_info']}\n"
+            f"💰 最新价: {latest_price_str}\n"
+            f"📈 最终建议: {data_dict['action']}\n"
+            f"💡 参考买入价: ${data_dict['buy_price']:.2f} | 卖出价: ${data_dict['sell_price']:.2f}\n"
+            f"📰 相关新闻: {data_dict['news_count']} 条"
         )
 
         await processing_msg.edit_text(reply, parse_mode="Markdown")
