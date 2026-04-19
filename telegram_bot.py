@@ -1,5 +1,7 @@
 import os
 import re
+import asyncio
+import threading
 from flask import Flask, request
 from dotenv import load_dotenv
 from telegram import Update
@@ -18,6 +20,25 @@ app = Flask(__name__)
 
 # Telegram Bot 应用
 application = Application.builder().token(TOKEN).build()
+
+# --- 创建一个独立的后台事件循环，用于运行所有异步操作 ---
+loop = asyncio.new_event_loop()
+
+def start_background_loop():
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+# 启动后台线程
+threading.Thread(target=start_background_loop, daemon=True).start()
+
+# 同步等待初始化完成，确保接收请求前 application 已就绪
+init_future = asyncio.run_coroutine_threadsafe(application.initialize(), loop)
+try:
+    init_future.result(timeout=10)  # 等待最多10秒
+    print("✅ Telegram Application initialized")
+except Exception as e:
+    print(f"❌ 初始化失败: {e}")
+    raise e
 
 # --- 辅助函数：从 HTML 报告中提取摘要 ---
 def extract_summary_from_html(html: str) -> dict:
@@ -44,7 +65,7 @@ def extract_summary_from_html(html: str) -> dict:
     summary["news_count"] = len(news_matches)
     return summary
 
-# --- 指令处理 ---
+# --- 指令处理（异步）---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
@@ -71,7 +92,6 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing_msg = await update.message.reply_text(f"🔍 正在分析 {ticker}，请稍候...")
 
     try:
-        # 调用真实分析函数（使用默认参数）
         fig, report_html, data_info = analyze_single(
             ticker=ticker,
             period_choice="日线",
@@ -97,24 +117,28 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await processing_msg.edit_text(f"❌ 分析 {ticker} 时出错：{str(e)}")
 
-# --- 注册指令 ---
+# 注册指令
 application.add_handler(CommandHandler('start', start_command))
 application.add_handler(CommandHandler('help', help_command))
 application.add_handler(CommandHandler('a', analyze_command))
 
-# --- Webhook 路由 ---
+# --- Webhook 路由（同步视图，安全提交到后台事件循环）---
 @app.route('/webhook', methods=['POST'])
-async def webhook():
+def webhook():
     if request.method == 'POST':
         update = Update.de_json(request.get_json(force=True), application.bot)
-        await application.process_update(update)
+        future = asyncio.run_coroutine_threadsafe(application.process_update(update), loop)
+        try:
+            future.result(timeout=30)
+        except Exception as e:
+            print(f"处理 webhook 时出错: {e}")
     return 'ok'
 
 @app.route('/')
 def home():
     return '🤖 AI 股票分析机器人正在运行中...'
 
-# --- 启动 ---
+# --- 启动 Flask ---
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
