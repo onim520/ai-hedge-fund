@@ -1,14 +1,4 @@
-import sys
-import traceback
-
-def log_uncaught_exceptions(exctype, value, tb):
-    error_msg = ''.join(traceback.format_exception(exctype, value, tb))
-    print(f"❌❌❌ UNCAUGHT EXCEPTION:\n{error_msg}", file=sys.stderr)
-    sys.exit(1)
-
-sys.excepthook = log_uncaught_exceptions
-
-import os
+﻿import os
 import re
 import asyncio
 import threading
@@ -22,51 +12,43 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 if not TOKEN:
     raise ValueError("❌ 未找到 TELEGRAM_BOT_TOKEN，请在 .env 文件中配置")
 
-# 导入分析函数
 from app import analyze_single
 
-# Flask 应用
 app = Flask(__name__)
-
-# Telegram Bot 应用
 application = Application.builder().token(TOKEN).build()
 
-# --- 创建一个独立的后台事件循环，用于运行所有异步操作 ---
 loop = asyncio.new_event_loop()
 
 def start_background_loop():
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
-# 启动后台线程
 threading.Thread(target=start_background_loop, daemon=True).start()
 
-# 同步等待初始化完成，确保接收请求前 application 已就绪
 init_future = asyncio.run_coroutine_threadsafe(application.initialize(), loop)
 try:
-    init_future.result(timeout=10)  # 等待最多10秒
+    init_future.result(timeout=10)
     print("✅ Telegram Application initialized")
 except Exception as e:
     print(f"❌ 初始化失败: {e}")
     raise e
 
-# --- 辅助函数：从 HTML 报告中提取摘要 ---
 def extract_summary_from_html(html: str) -> dict:
     summary = {
         "action": "未知",
         "latest_price": "N/A",
         "buy_price": "N/A",
         "sell_price": "N/A",
-        "news_count": 0
+        "news_count": 0,
     }
-    action_match = re.search(r'最终建议：([📈📉⏸️\s]+[买卖持有]+)', html)
+    action_match = re.search(r"最终建议：([📈📉⏸️\s]+[买卖持有]+)", html)
     if action_match:
         summary["action"] = action_match.group(1).strip()
-    price_match = re.search(r'最新:\s*\$?([\d.]+)', html)
+    price_match = re.search(r"最新:\s*\True([\d.]+)", html)
     if price_match:
         summary["latest_price"] = price_match.group(1)
-    buy_match = re.search(r'买入:\s*\$?([\d.]+)', html)
-    sell_match = re.search(r'卖出:\s*\$?([\d.]+)', html)
+    buy_match = re.search(r"买入:\s*\True([\d.]+)", html)
+    sell_match = re.search(r"卖出:\s*\True([\d.]+)", html)
     if buy_match:
         summary["buy_price"] = buy_match.group(1)
     if sell_match:
@@ -75,7 +57,6 @@ def extract_summary_from_html(html: str) -> dict:
     summary["news_count"] = len(news_matches)
     return summary
 
-# --- 指令处理（异步）---
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
@@ -106,9 +87,20 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ticker=ticker,
             period_choice="日线",
             theme="light",
-            ma5=True, ma10=True, ma20=True, ma30=False, ma60=False,
-            ema20=False, bb=True, kc=False, sar=False, vwap=False,
-            volume=True, macd=True, rsi=True, kdj=True
+            ma5=True,
+            ma10=True,
+            ma20=True,
+            ma30=False,
+            ma60=False,
+            ema20=False,
+            bb=True,
+            kc=False,
+            sar=False,
+            vwap=False,
+            volume=True,
+            macd=True,
+            rsi=True,
+            kdj=True,
         )
 
         summary = extract_summary_from_html(report_html)
@@ -116,9 +108,9 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply = (
             f"**{ticker} 技术分析摘要**\n\n"
             f"📊 {data_info}\n"
-            f"💰 最新价: ${summary['latest_price']}\n"
+            f"💰 最新价: \n"
             f"📈 最终建议: {summary['action']}\n"
-            f"💡 参考买入价: ${summary['buy_price']} | 卖出价: ${summary['sell_price']}\n"
+            f"💡 参考买入价:  | 卖出价: \n"
             f"📰 相关新闻: {summary['news_count']} 条"
         )
 
@@ -127,28 +119,27 @@ async def analyze_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await processing_msg.edit_text(f"❌ 分析 {ticker} 时出错：{str(e)}")
 
-# 注册指令
-application.add_handler(CommandHandler('start', start_command))
-application.add_handler(CommandHandler('help', help_command))
-application.add_handler(CommandHandler('a', analyze_command))
+application.add_handler(CommandHandler("start", start_command))
+application.add_handler(CommandHandler("help", help_command))
+application.add_handler(CommandHandler("a", analyze_command))
 
-# --- Webhook 路由（同步视图，安全提交到后台事件循环）---
-@app.route('/webhook', methods=['POST'])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.method == 'POST':
+    if request.method == "POST":
         update = Update.de_json(request.get_json(force=True), application.bot)
-        future = asyncio.run_coroutine_threadsafe(application.process_update(update), loop)
+        future = asyncio.run_coroutine_threadsafe(
+            application.process_update(update), loop
+        )
         try:
             future.result(timeout=30)
         except Exception as e:
             print(f"处理 webhook 时出错: {e}")
-    return 'ok'
+    return "ok"
 
-@app.route('/')
+@app.route("/")
 def home():
-    return '🤖 AI 股票分析机器人正在运行中...'
+    return "🤖 AI 股票分析机器人正在运行中..."
 
-# --- 启动 Flask ---
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-     application.run_polling()
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
