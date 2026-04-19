@@ -1,6 +1,5 @@
 # app.py - Hugging Face Spaces 专用版本
 
-import gradio as gr
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -355,4 +354,9 @@ with gr.Blocks(title="AI 股票分析助手", css=custom_css) as demo:
     gr.Markdown("---\n💡 **提示**：修改任何选项后图表将自动更新。支持缩放、悬停查看数值。")
 
 if __name__ == "__main__":
+    import gradio as gr
+
+    with gr.Blocks(title="AI 股票分析助手", css=custom_css) as demo:
+        # ... Gradio 界面代码 ...
+
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)))
