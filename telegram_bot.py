@@ -13,7 +13,7 @@ if not TOKEN:
     raise ValueError("❌ 未找到 TELEGRAM_BOT_TOKEN，请在 .env 文件中配置")
 
 # 导入分析函数
-from web_app import analyze_single
+from app import analyze_single
 
 # Flask 应用
 app = Flask(__name__)
